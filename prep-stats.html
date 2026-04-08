@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prep Stats</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0f11;
+    --surface:   #141618;
+    --border:    #222527;
+    --header-bg: #1a1d20;
+    --amber:     #f0a500;
+    --green:     #22c55e;
+    --red:       #ef4444;
+    --muted:     #6b7280;
+    --text:      #e5e7eb;
+    --label:     #9ca3af;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px;
+  }
+
+  /* subtle scanline texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.012) 2px,
+      rgba(255,255,255,0.012) 4px
+    );
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  /* ── Top bar ── */
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: var(--amber);
+    border-radius: 6px 6px 0 0;
+  }
+
+  .topbar-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 13px;
+    color: #000;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .topbar-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: #000;
+    opacity: 0.75;
+  }
+
+  /* ── Table card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+  }
+
+  /* ── Section header ── */
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 16px;
+    background: var(--header-bg);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-header:first-child {
+    border-top: none;
+  }
+
+  .section-name {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  .section-time {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* ── Data rows ── */
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    transition: background 0.15s;
+  }
+
+  .row:last-child { border-bottom: none; }
+  .row:hover { background: rgba(240,165,0,0.04); }
+
+  .row-label {
+    font-size: 13px;
+    color: var(--label);
+    font-weight: 400;
+  }
+
+  .row-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    text-align: right;
+  }
+
+  .row-value.loading {
+    color: var(--muted);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+
+  .row-value .secondary {
+    color: var(--muted);
+    font-size: 11px;
+    margin-left: 2px;
+  }
+
+  .row-value .change.pos { color: var(--green); }
+  .row-value .change.neg { color: var(--red); }
+
+  /* ── Refresh button ── */
+  .refresh-wrap {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid var(--amber);
+    border-radius: 4px;
+    color: var(--amber);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .refresh-btn:hover { background: var(--amber); color: #000; }
+  .refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .refresh-btn svg {
+    width: 13px; height: 13px;
+    transition: transform 0.5s;
+  }
+
+  .refresh-btn.spinning svg { animation: spin 0.8s linear infinite; }
+
+  .last-updated {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── Animations ── */
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+  }
+
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .row { animation: fadeIn 0.3s ease both; }
+
+  /* staggered reveal */
+  .row:nth-child(1)  { animation-delay: 0.02s; }
+  .row:nth-child(2)  { animation-delay: 0.04s; }
+  .row:nth-child(3)  { animation-delay: 0.06s; }
+  .row:nth-child(4)  { animation-delay: 0.08s; }
+  .row:nth-child(5)  { animation-delay: 0.10s; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="topbar">
+    <span class="topbar-title">⬡ Prep Stats</span>
+    <span class="topbar-date" id="header-date">—</span>
+  </div>
+
+  <div class="card" id="main-card">
+
+    <!-- Exchange Rates -->
+    <div class="section-header">
+      <span class="section-name">Exchange Rates</span>
+      <span class="section-time" id="time-fx">—</span>
+    </div>
+    <div class="row"><span class="row-label">USD-EUR (EUR-USD)</span><span class="row-value loading" id="eur">···</span></div>
+    <div class="row"><span class="row-label">USD-GBP (GBP-USD)</span><span class="row-value loading" id="gbp">···</span></div>
+    <div class="row"><span class="row-label">USD-CAD (CAD-USD)</span><span class="row-value loading" id="cad">···</span></div>
+    <div class="row"><span class="row-label">JPY-USD (USD-JPY)</span><span class="row-value loading" id="jpy">···</span></div>
+
+    <!-- Futures -->
+    <div class="section-header">
+      <span class="section-name">Futures Prices</span>
+      <span class="section-time" id="time-futures">—</span>
+    </div>
+    <div class="row"><span class="row-label">Oil:</span><span class="row-value loading" id="oil">···</span></div>
+    <div class="row"><span class="row-label">Natural Gas:</span><span class="row-value loading" id="natgas">···</span></div>
+    <div class="row"><span class="row-label">Gold:</span><span class="row-value loading" id="gold">···</span></div>
+    <div class="row"><span class="row-label">Copper:</span><span class="row-value loading" id="copper">···</span></div>
+
+    <!-- Treasury Yields -->
+    <div class="section-header">
+      <span class="section-name">Treasury Yields</span>
+      <span class="section-time" id="time-yields">—</span>
+    </div>
+    <div class="row"><span class="row-label">10-Year:</span><span class="row-value loading" id="y10">···</span></div>
+    <div class="row"><span class="row-label">5-Year:</span><span class="row-value loading" id="y5">···</span></div>
+    <div class="row"><span class="row-label">2-Year:</span><span class="row-value loading" id="y2">···</span></div>
+    <div class="row"><span class="row-label">1-Year:</span><span class="row-value loading" id="y1">···</span></div>
+
+    <!-- Stock Markets -->
+    <div class="section-header">
+      <span class="section-name">Stock Markets</span>
+      <span class="section-time" id="time-stocks">as of 12:00 AM</span>
+    </div>
+    <div class="row"><span class="row-label">Dow Jones Industrial Average:</span><span class="row-value loading" id="dji">···</span></div>
+    <div class="row"><span class="row-label">Nasdaq Composite:</span><span class="row-value loading" id="ixic">···</span></div>
+    <div class="row"><span class="row-label">S&amp;P 500:</span><span class="row-value loading" id="spx">···</span></div>
+
+    <!-- Bitcoin -->
+    <div class="section-header">
+      <span class="section-name">Bitcoin</span>
+      <span class="section-time" id="time-btc">—</span>
+    </div>
+    <div class="row"><span class="row-label">BTC/USD</span><span class="row-value loading" id="btc">···</span></div>
+
+  </div><!-- /card -->
+
+  <div class="refresh-wrap">
+    <button class="refresh-btn" id="refresh-btn" onclick="loadAll()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="1 4 1 10 7 10"></polyline>
+        <path d="M3.51 15a9 9 0 1 0 .49-4"></path>
+      </svg>
+      REFRESH
+    </button>
+    <span class="last-updated" id="last-updated"></span>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ── Helpers ───────────────────────────────────────────────────
+
+function fmtNum(n, dec) {
+  if (n === null || n === undefined || isNaN(n)) return 'N/A';
+  return parseFloat(n.toFixed(dec)).toString();
+}
+
+function fmtCommas(n, dec) {
+  if (n === null || n === undefined || isNaN(n)) return 'N/A';
+  const parts = n.toFixed(dec).split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+}
+
+function nowTime() {
+  const d = new Date();
+  let h = d.getHours(), m = d.getMinutes();
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${h}:${m.toString().padStart(2,'0')} ${ampm}`;
+}
+
+function nowDate() {
+  const d = new Date();
+  return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+}
+
+function setVal(id, html) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('loading');
+  el.innerHTML = html;
+}
+
+function indexHtml(price, change, pct, dec=1) {
+  if (price === null) return 'N/A';
+  if (change === null) return fmtCommas(price, dec);
+  const sign = change >= 0 ? '+' : '-';
+  const cls  = change >= 0 ? 'pos' : 'neg';
+  return `${fmtCommas(price, dec)} <span class="change ${cls}">(${fmtCommas(Math.abs(change), dec)}/${sign}${fmtNum(Math.abs(pct), 2)}%)</span>`;
+}
+
+function fxHtml(primary, secondary, dec=4) {
+  return `${fmtNum(primary, dec)} <span class="secondary">(${fmtNum(secondary, dec)})</span>`;
+}
+
+// ── CORS proxy wrapper ────────────────────────────────────────
+// Used for Yahoo Finance which blocks direct browser requests.
+// allorigins.win is a free, reliable CORS proxy.
+
+async function proxiedFetch(url) {
+  const proxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+  const res = await fetch(proxy);
+  if (!res.ok) throw new Error(`Proxy ${res.status} for ${url}`);
+  return res.json();
+}
+
+// ── Exchange Rates ────────────────────────────────────────────
+
+async function loadFX() {
+  try {
+    const res  = await fetch('https://open.er-api.com/v6/latest/USD');
+    const data = await res.json();
+    if (data.result !== 'success') throw new Error('FX API error');
+
+    const r = data.rates;
+    document.getElementById('time-fx').textContent = `as of ${nowTime()}`;
+
+    setVal('eur', fxHtml(r.EUR, 1/r.EUR));
+    setVal('gbp', fxHtml(r.GBP, 1/r.GBP));
+    setVal('cad', fxHtml(r.CAD, 1/r.CAD));
+    // JPY: primary = USD per JPY (4dp), secondary = JPY per USD (1dp)
+    setVal('jpy', `${fmtNum(1/r.JPY, 4)} <span class="secondary">(${fmtNum(r.JPY, 1)})</span>`);
+  } catch(e) {
+    console.error('FX:', e);
+    ['eur','gbp','cad','jpy'].forEach(id => setVal(id, 'N/A'));
+  }
+}
+
+// ── Yahoo Finance (futures + bitcoin) ────────────────────────
+
+async function fetchYahoo(symbol) {
+  try {
+    const url  = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+    const data = await proxiedFetch(url);
+    const result = data?.chart?.result?.[0];
+    if (!result) return null;
+
+    const meta   = result.meta;
+    const price  = meta.regularMarketPrice;
+    const prev   = meta.chartPreviousClose || meta.previousClose;
+    const change = prev ? price - prev : null;
+    const pct    = prev ? ((price - prev) / prev) * 100 : null;
+    return { price, change, pct };
+  } catch(e) {
+    console.error('Yahoo', symbol, e);
+    return null;
+  }
+}
+
+async function loadFutures() {
+  document.getElementById('time-futures').textContent = `as of ${nowTime()}`;
+  const symbols = [
+    ['oil',    'CL=F',  2],
+    ['natgas', 'NG=F',  2],
+    ['gold',   'GC=F',  2],
+    ['copper', 'HG=F',  2],
+  ];
+  await Promise.all(symbols.map(async ([id, sym, dec]) => {
+    const q = await fetchYahoo(sym);
+    setVal(id, q ? `$${fmtCommas(q.price, dec)}` : 'N/A');
+  }));
+}
+
+async function loadStocks() {
+  const symbols = [
+    ['dji',  '^DJI'],
+    ['ixic', '^IXIC'],
+    ['spx',  '^GSPC'],
+  ];
+  await Promise.all(symbols.map(async ([id, sym]) => {
+    const q = await fetchYahoo(sym);
+    setVal(id, q ? indexHtml(q.price, q.change, q.pct) : 'N/A');
+  }));
+}
+
+async function loadBitcoin() {
+  document.getElementById('time-btc').textContent = `as of ${nowTime()}`;
+  const q = await fetchYahoo('BTC-USD');
+  setVal('btc', q ? indexHtml(q.price, q.change, q.pct) : 'N/A');
+}
+
+// ── Treasury Yields (FRED) ────────────────────────────────────
+
+async function fetchFred(seriesId) {
+  try {
+    const url  = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${seriesId}`;
+    const res  = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`);
+    const text = await res.text();
+    const rows = text.trim().split('\n');
+    for (let i = rows.length - 1; i >= 1; i--) {
+      const parts = rows[i].split(',');
+      if (parts[1] && parts[1].trim() !== '.') {
+        return parseFloat(parts[1].trim());
+      }
+    }
+    return null;
+  } catch(e) {
+    console.error('FRED', seriesId, e);
+    return null;
+  }
+}
+
+async function loadYields() {
+  document.getElementById('time-yields').textContent = `as of ${nowTime()}`;
+  const series = [
+    ['y10', 'DGS10'],
+    ['y5',  'DGS5'],
+    ['y2',  'DGS2'],
+    ['y1',  'DGS1'],
+  ];
+  await Promise.all(series.map(async ([id, sid]) => {
+    const val = await fetchFred(sid);
+    setVal(id, val !== null ? `${fmtNum(val, 3)}%` : 'N/A');
+  }));
+}
+
+// ── Main loader ───────────────────────────────────────────────
+
+async function loadAll() {
+  const btn = document.getElementById('refresh-btn');
+  btn.disabled = true;
+  btn.classList.add('spinning');
+
+  // Reset to loading state
+  const ids = ['eur','gbp','cad','jpy','oil','natgas','gold','copper','y10','y5','y2','y1','dji','ixic','spx','btc'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.add('loading'); el.innerHTML = '···'; }
+  });
+
+  document.getElementById('header-date').textContent = nowDate();
+
+  // Run all fetches in parallel groups
+  await Promise.all([
+    loadFX(),
+    loadFutures(),
+    loadYields(),
+    loadStocks(),
+    loadBitcoin(),
+  ]);
+
+  const now = new Date();
+  document.getElementById('last-updated').textContent =
+    `Updated ${now.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}`;
+
+  btn.disabled = false;
+  btn.classList.remove('spinning');
+}
+
+// Load on page open
+loadAll();
+</script>
+</body>
+</html>
