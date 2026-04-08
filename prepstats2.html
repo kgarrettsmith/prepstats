@@ -120,7 +120,7 @@
     <div class="row"><span class="row-label">2-Year:</span><span class="row-value loading" id="y2">···</span></div>
     <div class="row"><span class="row-label">1-Year:</span><span class="row-value loading" id="y1">···</span></div>
 
-    <div class="section-header"><span class="section-name">Stock Markets</span><span class="section-time">as of 12:00 AM</span></div>
+    <div class="section-header"><span class="section-name">Stock Markets</span><span class="section-time" id="time-stocks">—</span></div>
     <div class="row"><span class="row-label">Dow Jones Industrial Average:</span><span class="row-value loading" id="dji">···</span></div>
     <div class="row"><span class="row-label">Nasdaq Composite:</span><span class="row-value loading" id="ixic">···</span></div>
     <div class="row"><span class="row-label">S&amp;P 500:</span><span class="row-value loading" id="spx">···</span></div>
@@ -335,6 +335,7 @@ async function fetchFredCSV(seriesId) {
 // ── Stocks ────────────────────────────────────────────────────
 
 async function loadStocks() {
+  document.getElementById('time-stocks').textContent = `as of ${nowTime()}`;
   const items = [
     ['dji',  '^DJI'],
     ['ixic', '^IXIC'],
